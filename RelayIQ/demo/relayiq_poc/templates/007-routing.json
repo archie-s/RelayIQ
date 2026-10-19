@@ -1,0 +1,24 @@
+{
+  "service_url": "http://127.0.0.1:${RELAYIQ_PORT}",
+  "preferred_target_class": "cloud",
+  "connectivity": true,
+  "cloud_budget_kb": null,
+  "required_capabilities": [],
+  "failure_mode": "local",
+  "decision_timeout_seconds": 30,
+  "local": {
+    "provider": "foundry-local",
+    "model": "${LOCAL_MODEL_ID}",
+    "base_url": "http://127.0.0.1:${FOUNDRY_PORT}/v1"
+  },
+  "cloud": {
+    "provider": "nvidia",
+    "model": "${CLOUD_MODEL_ID}",
+    "base_url": "https://integrate.api.nvidia.com/v1",
+    "api_key_env": "NVIDIA_API_KEY"
+  },
+  "demo_profile": {
+    "id": "demo-redaction-v1",
+    "manifest": "${DEMO_ROOT}\\demo-manifest.json"
+  }
+}

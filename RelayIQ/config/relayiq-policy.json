@@ -1,0 +1,6 @@
+{
+  "policy_revision": "relayiq-judge-v1",
+  "permitted_targets": ["local", "cloud"],
+  "local_failure_permitted": true,
+  "deny_inputs": ["Demonstrate the configured demo block."]
+}

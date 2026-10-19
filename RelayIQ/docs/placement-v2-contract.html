@@ -1,0 +1,685 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>RelayIQ Placement API v2 Contract</title>
+  <style>
+    :root {
+      color-scheme: light;
+      --ink: #172033;
+      --muted: #5d687c;
+      --line: #d9dfeb;
+      --panel: #f6f8fc;
+      --accent: #3659b8;
+      --accent-soft: #eaf0ff;
+      --code: #111827;
+      --code-ink: #e5e7eb;
+      --warning: #7a4d00;
+      --warning-bg: #fff6dc;
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      color: var(--ink);
+      background: #fff;
+      font: 16px/1.6 system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    }
+
+    main {
+      width: min(1100px, calc(100% - 40px));
+      margin: 48px auto 80px;
+    }
+
+    h1, h2, h3 {
+      line-height: 1.25;
+      color: #111827;
+    }
+
+    h1 { margin-bottom: 8px; font-size: 2.35rem; }
+
+    h2 {
+      margin-top: 48px;
+      padding-bottom: 9px;
+      border-bottom: 1px solid var(--line);
+      font-size: 1.55rem;
+    }
+
+    h3 { margin-top: 30px; font-size: 1.15rem; }
+    p, li { max-width: 88ch; }
+
+    code {
+      padding: 0.12em 0.32em;
+      border-radius: 4px;
+      background: var(--accent-soft);
+      color: #243f8f;
+      font-family: Consolas, "SFMono-Regular", monospace;
+      font-size: 0.92em;
+    }
+
+    pre {
+      overflow-x: auto;
+      margin: 18px 0 28px;
+      padding: 20px;
+      border-radius: 10px;
+      background: var(--code);
+      color: var(--code-ink);
+      line-height: 1.5;
+    }
+
+    pre code { padding: 0; background: transparent; color: inherit; }
+
+    table {
+      width: 100%;
+      margin: 18px 0 28px;
+      border-collapse: collapse;
+      font-size: 0.95rem;
+    }
+
+    th, td {
+      padding: 12px 14px;
+      border: 1px solid var(--line);
+      text-align: left;
+      vertical-align: top;
+    }
+
+    th { background: var(--panel); font-weight: 650; }
+    .meta { margin: 0; color: var(--muted); }
+
+    .endpoint {
+      display: inline-flex;
+      gap: 12px;
+      align-items: center;
+      margin-top: 24px;
+      padding: 14px 18px;
+      border: 1px solid #b9c7ee;
+      border-radius: 9px;
+      background: var(--accent-soft);
+    }
+
+    .method {
+      padding: 3px 9px;
+      border-radius: 5px;
+      background: var(--accent);
+      color: #fff;
+      font-weight: 700;
+      letter-spacing: 0.03em;
+    }
+
+    .callout {
+      margin: 22px 0;
+      padding: 16px 18px;
+      border-left: 4px solid var(--accent);
+      background: var(--panel);
+    }
+
+    .warning {
+      border-left-color: #d18a00;
+      background: var(--warning-bg);
+      color: var(--warning);
+    }
+
+    .required { color: #9b1c1c; font-weight: 650; }
+    .optional { color: var(--muted); }
+  </style>
+</head>
+<body>
+<main>
+  <header>
+    <h1>RelayIQ Placement API v2 Contract</h1>
+    <p class="meta"><strong>Status:</strong> Placement API v2 Draft 4 - implemented</p>
+    <p class="meta"><strong>Scope:</strong> standalone placement API; legacy v1 and scheduler behavior remain separate</p>
+    <p class="meta"><strong>Purpose:</strong> allow an independent agent harness to request a policy-backed execution target class and its requirements.</p>
+    <div class="endpoint">
+      <span class="method">POST</span>
+      <code>/v2/placement/decide</code>
+    </div>
+  </header>
+
+  <section>
+    <h2>1. Endpoint behavior</h2>
+    <p>
+      RelayIQ's Judge classifies the supplied input and request context, including whether this
+      specific request requires caller consent for cloud use and which types of sensitive data
+      it detects. RelayIQ then evaluates one
+      operator-controlled policy snapshot, applies caller constraints, and returns a bounded
+      placement recommendation. The response recommends one of <code>local</code>,
+      <code>cloud</code>, <code>cloud_with_consent</code>, or <code>fallback</code>.
+    </p>
+    <p>
+      Consent is a per-request Judge decision, not an operator-wide cloud setting. The endpoint
+      does not invoke an answer model, execute tools, manage provider credentials,
+      alter the caller's conversation, or return a sanitized payload. The caller remains responsible
+      for redacting sensitive data before cloud transmission, obtaining consent, selecting a specific suggested
+      model, executing it, and handling retries or fallback.
+    </p>
+    <div class="callout">
+      A valid request normally returns HTTP <code>200</code> even when no model execution is
+      permitted. In that case <code>target_class</code> is <code>"fallback"</code> and
+      <code>fallback_action</code> tells the caller whether local execution is allowed or processing
+      must stop.
+    </div>
+    <div class="callout warning">
+      This is a breaking revision from Draft 3. Draft 4 removes
+      <code>context.redaction_profiles</code>, <code>requirements.redaction_profile</code>,
+      policy setting <code>supported_redaction_profiles</code>, and reason code
+      <code>REDACTION_UNSUPPORTED</code>. Under the strict request schema, sending
+      <code>context.redaction_profiles</code> returns HTTP <code>400</code> with
+      <code>INVALID_REQUEST</code>. Producers and consumers require coordinated updates.
+      The standalone runtime, generated OpenAPI, checked-in policy configuration, and
+      <code>docs/relayiq-v2-poc.md</code> implement Draft 4. Migrate existing policy files
+      to the profile-free shape with a new revision; old files fail strict startup validation.
+      The v2 Judge path publishes the expanded classification structure; the legacy Judge
+      interface and deterministic fallback routing are unchanged.
+      <code>suggested_models</code> is now a two-lane object, not the earlier flat array.
+      <code>DECISION_UNAVAILABLE</code> is retired and never returned. An unavailable policy
+      or failed policy evaluation returns HTTP <code>500</code>, not a fallback decision.
+    </div>
+    <div class="callout warning">
+      This v2 response intentionally does not contain the v1 fields <code>placement</code>,
+      <code>policy</code>, <code>permitted_payload</code>, or <code>requires_consent</code>.
+      The legacy v1 endpoint remains a separate API surface.
+    </div>
+  </section>
+
+  <section>
+    <h2>2. Request</h2>
+    <p>Send a strict JSON object using <code>Content-Type: application/json</code>. Unknown fields and type coercion are rejected.</p>
+
+    <h3>Example</h3>
+    <pre><code>{
+  "input": "Review confidential employee data for alex.example@example.com and compare two architecture options for storing it.",
+  "preferred_target_class": "cloud",
+  "model_mapping": {
+    "local": ["phi-4-mini"],
+    "cloud": ["nvidia/nemotron-3.5-lightning-30b-a3b"]
+  },
+  "context": {
+    "connectivity": true,
+    "cloud_budget_kb": null,
+    "required_capabilities": ["extended_reasoning"]
+  }
+}</code></pre>
+
+    <h3>Top-level fields</h3>
+    <table>
+      <thead>
+        <tr><th>Field</th><th>Type</th><th>Required</th><th>Acceptable / sample values</th><th>Meaning</th></tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td><code>input</code></td><td>string</td><td class="required">Yes</td>
+          <td>1-100,000 characters containing at least one non-whitespace character</td>
+          <td>The text RelayIQ evaluates. Cloud budget is measured from the original UTF-8 bytes of this value.</td>
+        </tr>
+        <tr>
+          <td><code>preferred_target_class</code></td><td>string enum</td><td class="optional">No</td>
+          <td><code>local</code>, <code>cloud</code></td>
+          <td>A caller preference. RelayIQ honors it only when that class is permitted and eligible. If omitted, classifier and policy routing chooses the desired class. Explicit <code>null</code> is invalid.</td>
+        </tr>
+        <tr>
+          <td><code>model_mapping</code></td><td>object</td><td class="optional">No</td>
+          <td><code>{"local":["phi-4-mini"],"cloud":["cloud-model"]}</code></td>
+          <td>Ordered candidate model names by execution lane. If omitted, inventory is unspecified and the response must omit <code>suggested_models</code> entirely. A supplied empty or missing lane means that lane has no eligible model. Explicit <code>null</code> is invalid.</td>
+        </tr>
+        <tr>
+          <td><code>context</code></td><td>object</td><td class="optional">No</td>
+          <td><code>{}</code> or the fields below</td>
+          <td>Caller-known constraints and hints. Omitted fields use the defaults below.</td>
+        </tr>
+      </tbody>
+    </table>
+
+    <h3>Model mapping fields</h3>
+    <table>
+      <thead>
+        <tr><th>Field</th><th>Type</th><th>Required</th><th>Default</th><th>Rules</th></tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td><code>local</code></td><td>array of strings</td><td class="optional">No</td><td><code>[]</code></td>
+          <td>Each name must be non-blank and unique within the local lane. Order is preserved.</td>
+        </tr>
+        <tr>
+          <td><code>cloud</code></td><td>array of strings</td><td class="optional">No</td><td><code>[]</code></td>
+          <td>Each name must be non-blank and unique within the cloud lane. Order is preserved.</td>
+        </tr>
+      </tbody>
+    </table>
+    <div class="callout">
+      Omitted <code>model_mapping</code> and supplied <code>model_mapping: {}</code> have different
+      meanings. <strong>If the request omits <code>model_mapping</code>, the response must not
+      contain a <code>suggested_models</code> field for any target class, including
+      <code>fallback</code>.</strong> The field is omitted entirely, not returned as
+      <code>null</code> or <code>[]</code>; RelayIQ does not supply default model suggestions.
+      A supplied empty mapping makes both lanes ineligible and returns
+      <code>suggested_models: {"local":[],"cloud":[]}</code> with a bounded fallback decision.
+    </div>
+
+    <h3>Context fields</h3>
+    <table>
+      <thead>
+        <tr><th>Field</th><th>Type</th><th>Required</th><th>Default</th><th>Meaning</th></tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td><code>connectivity</code></td><td>boolean</td><td class="optional">No</td><td><code>true</code></td>
+          <td>Whether cloud execution is reachable. Only a JSON boolean is accepted; <code>false</code> excludes cloud.</td>
+        </tr>
+        <tr>
+          <td><code>cloud_budget_kb</code></td><td>finite number or null</td><td class="optional">No</td><td><code>null</code></td>
+          <td>Maximum request budget for cloud. Values must be non-negative. Usage is <code>len(input.encode("utf-8")) / 1024</code>; equality is allowed and any excess excludes cloud.</td>
+        </tr>
+        <tr>
+          <td><code>required_capabilities</code></td><td>array of non-empty strings</td><td class="optional">No</td><td><code>[]</code></td>
+          <td>Caller capability hints. In this POC they are accepted but do not independently determine eligibility.</td>
+        </tr>
+      </tbody>
+    </table>
+  </section>
+
+  <section>
+    <h2>3. Response</h2>
+    <p>A completed decision returns HTTP <code>200</code> and the following JSON shape.</p>
+
+    <h3>Example: healthy classification with sensitive data</h3>
+    <pre><code>{
+  "decision_id": "7b8f0e54-3d73-4f27-93a2-78c82867bf9e",
+  "target_class": "cloud_with_consent",
+  "policy_revision": "relayiq-judge-v1",
+  "requirements": {
+    "consent_required": true
+  },
+  "fallback_action": "local",
+  "reason_codes": [
+    "PREFERENCE_HONORED",
+    "SENSITIVE_DATA_DETECTED"
+  ],
+  "classification": {
+    "routine": false,
+    "fresh_knowledge": false,
+    "reasoning_heavy": true,
+    "critical": false,
+    "sensitive_data": true
+  },
+  "sensitive_data_types": ["email_address"],
+  "explanation": "The cloud class is permitted and eligible; the judge requires caller consent.",
+  "suggested_models": {
+    "local": ["phi-4-mini"],
+    "cloud": ["nvidia/nemotron-3.5-lightning-30b-a3b"]
+  }
+}</code></pre>
+
+    <h3>Response fields</h3>
+    <table>
+      <thead>
+        <tr><th>Field</th><th>Type</th><th>Required</th><th>Acceptable / sample values</th><th>Meaning</th></tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td><code>decision_id</code></td><td>UUID string</td><td class="required">Yes</td>
+          <td><code>7b8f0e54-3d73-4f27-93a2-78c82867bf9e</code></td>
+          <td>New server-generated identifier for this decision.</td>
+        </tr>
+        <tr>
+          <td><code>target_class</code></td><td>string enum</td><td class="required">Yes</td>
+          <td><code>local</code>, <code>cloud</code>, <code>cloud_with_consent</code>, <code>fallback</code></td>
+          <td>The recommended execution lane or a bounded no-primary-target result.</td>
+        </tr>
+        <tr>
+          <td><code>policy_revision</code></td><td>non-blank string</td><td class="required">Yes</td>
+          <td><code>relayiq-judge-v1</code></td>
+          <td>Revision of the immutable policy snapshot used. Every successful decision has a known revision; an unavailable policy returns HTTP <code>500</code> instead.</td>
+        </tr>
+        <tr>
+          <td><code>requirements</code></td><td>object</td><td class="required">Yes</td>
+          <td><code>{"consent_required":true}</code></td>
+          <td>Requirements the caller must satisfy before using the selected class.</td>
+        </tr>
+        <tr>
+          <td><code>fallback_action</code></td><td>string enum</td><td class="required">Yes</td>
+          <td><code>local</code>, <code>stop</code></td>
+          <td>Allowed action when the recommendation cannot be completed. This field is policy- and eligibility-dependent.</td>
+        </tr>
+        <tr>
+          <td><code>reason_codes</code></td><td>non-empty array of strings</td><td class="required">Yes</td>
+          <td>One or more codes from the reason-code table below</td>
+          <td>Stable, machine-readable contributors to the decision. Duplicate codes are removed while preserving order.</td>
+        </tr>
+        <tr>
+          <td><code>classification</code></td><td>object with five boolean fields</td><td class="optional">Conditional</td>
+          <td><code>routine</code>, <code>fresh_knowledge</code>, <code>reasoning_heavy</code>, <code>critical</code>, <code>sensitive_data</code></td>
+          <td>Required for a healthy Judge classification, regardless of target class. Omitted entirely when <code>CLASSIFIER_DEGRADED</code> is returned; never <code>null</code> or an empty object.</td>
+        </tr>
+        <tr>
+          <td><code>sensitive_data_types</code></td><td>non-empty array of unique category strings</td><td class="optional">Conditional</td>
+          <td><code>["email_address"]</code></td>
+          <td>Present exactly when <code>SENSITIVE_DATA_DETECTED</code> is returned. Omitted for no detection or <code>CLASSIFIER_DEGRADED</code>. See the classification rules below.</td>
+        </tr>
+        <tr>
+          <td><code>suggested_models</code></td><td>object with local and cloud arrays</td><td class="optional">Conditional</td>
+          <td><code>{"local":["phi-4-mini"],"cloud":["cloud-model"]}</code>, or omitted</td>
+          <td>Omitted entirely when <code>model_mapping</code> is omitted, including for fallback. With a mapping, both arrays are required: normal recommendations preserve both request lists in order, regardless of the selected lane; missing request lanes become <code>[]</code>. For fallback, both arrays are empty.</td>
+        </tr>
+        <tr>
+          <td><code>explanation</code></td><td>string</td><td class="optional">No</td>
+          <td><code>The cloud class is permitted and eligible.</code></td>
+          <td>Human-readable summary. Callers must use enums and reason codes for machine behavior.</td>
+        </tr>
+      </tbody>
+    </table>
+
+    <h3>Suggested model inventory</h3>
+    <p>
+      When present, <code>suggested_models</code> contains exactly <code>local</code> and
+      <code>cloud</code>, each an array of non-blank strings, unique within its own lane.
+      The same model name may appear in both lanes. Neither lane may be omitted or
+      <code>null</code>. The earlier flat-array form is invalid.
+    </p>
+    <p>
+      These lists describe caller-provided inventory, not permission or availability.
+      A local recommendation still includes the caller's cloud models even if cloud is
+      excluded by policy, connectivity, or budget. Likewise a cloud recommendation includes
+      the caller's local models. Only the recommended lane must be non-empty.
+      Follow <code>target_class</code>, consent requirements, and <code>fallback_action</code>;
+      do not execute an unselected lane merely because its models are listed.
+    </p>
+
+    <h3>Requirements fields</h3>
+    <table>
+      <thead>
+        <tr><th>Field</th><th>Type</th><th>Required</th><th>Invariant</th></tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td><code>consent_required</code></td><td>boolean</td><td class="required">Yes</td>
+          <td>Must be <code>true</code> exactly for <code>cloud_with_consent</code> and <code>false</code> for every other target. The Judge determines it from the prompt and request context.</td>
+        </tr>
+      </tbody>
+    </table>
+
+    <h3>Classification fields</h3>
+    <p>
+      <code>classification</code> reports the Judge's assessment of the input and request context,
+      not the final placement decision. When present, it contains exactly the five fields below,
+      each required and a strict JSON boolean. Missing fields, extra fields, strings, numbers,
+      and <code>null</code> are invalid. Do not infer these flags from the selected target or
+      substitute defaults for unavailable Judge output.
+    </p>
+    <table>
+      <thead><tr><th>Field</th><th>Type</th><th>Meaning when true</th></tr></thead>
+      <tbody>
+        <tr><td><code>routine</code></td><td>boolean</td><td>The Judge assesses the request as routine, straightforward work.</td></tr>
+        <tr><td><code>fresh_knowledge</code></td><td>boolean</td><td>A correct answer requires current or up-to-date information.</td></tr>
+        <tr><td><code>reasoning_heavy</code></td><td>boolean</td><td>The request requires deep or substantial multi-step reasoning.</td></tr>
+        <tr><td><code>critical</code></td><td>boolean</td><td>The request concerns an immediate real-world threat to physical health, life, or safety.</td></tr>
+        <tr><td><code>sensitive_data</code></td><td>boolean</td><td>The Judge detected data within its active sensitivity scope in the input or request context. The current relayiq-judge-v1 scope is email addresses only.</td></tr>
+      </tbody>
+    </table>
+    <p>
+      These are classification signals, not mutually exclusive target classes.
+      This contract does not define <code>routine</code> as the negation of another flag.
+      Policy and caller constraints still determine placement. <code>critical</code> does not
+      authorize cloud disclosure, and <code>sensitive_data</code> does not replace
+      <code>requirements.consent_required</code>.
+    </p>
+    <p>
+      For healthy classification, <code>classification.sensitive_data</code> is <code>true</code>
+      if and only if <code>SENSITIVE_DATA_DETECTED</code> and a non-empty
+      <code>sensitive_data_types</code> array are returned. When it is <code>false</code>,
+      omit both the reason code and category field. For <code>CLASSIFIER_DEGRADED</code>,
+      omit the entire <code>classification</code> object as well as both sensitivity findings;
+      do not report unavailable sensitivity as <code>false</code>. These rules apply to all
+      completed decisions, including local and fallback. Error envelopes remain unchanged.
+    </p>
+
+    <h3>Sensitive-data classification rules</h3>
+    <p>
+      The current <code>relayiq-judge-v1</code> Judge uses LLM-based email detection:
+      return a positive sensitivity finding only when at least one actual email
+      address is detected in the input or supplied context. Positive findings use
+      exactly <code>["email_address"]</code>, once even for multiple addresses.
+      Names, social security numbers, employee IDs, phone numbers, financial data,
+      confidential text, and mentions of email without an address do not independently
+      trigger the finding. An email alongside other data still qualifies.
+      Out-of-scope positive categories or invalid model assessments produce
+      <code>CLASSIFIER_DEGRADED</code> with findings omitted, not a fabricated negative.
+      Consent remains independent and may be required for non-email confidential
+      data. This scope does not narrow the caller's redaction or disclosure obligations.
+    </p>
+    <p>
+      <code>sensitive_data_types</code> describes the types of sensitive data the Judge detected
+      in the supplied input and request context. Each value is a non-blank snake_case identifier
+      matching <code>^[a-z][a-z0-9]*(?:_[a-z0-9]+)*$</code>. The vocabulary is extensible:
+      <code>email_address</code> is the only category emitted by the current Judge.
+      Future Judge versions may add categories such as <code>social_security_number</code>
+      or <code>employee_id</code>; these are not a closed enum. Callers must tolerate
+      additional category identifiers.
+      Values must be unique; array order has no semantic significance.
+    </p>
+    <p>
+      Return only category labels, never detected values, snippets, personal identifiers, or
+      offsets. The field is present if and only if <code>reason_codes</code> contains
+      <code>SENSITIVE_DATA_DETECTED</code>. It must not be <code>null</code> or an empty array,
+      and no unavailability sentinel is used.
+    </p>
+    <table>
+      <thead><tr><th>Assessment</th><th>SENSITIVE_DATA_DETECTED</th><th>sensitive_data_types</th><th>CLASSIFIER_DEGRADED</th></tr></thead>
+      <tbody>
+        <tr><td>Healthy, sensitive data detected</td><td>Present</td><td>Non-empty unique category array</td><td>Absent</td></tr>
+        <tr><td>Healthy, no sensitive data detected</td><td>Absent</td><td>Omitted</td><td>Absent</td></tr>
+        <tr><td>Degraded</td><td>Absent</td><td>Omitted</td><td>Present</td></tr>
+      </tbody>
+    </table>
+    <p>
+      <code>CLASSIFIER_DEGRADED</code> is mutually exclusive with both
+      <code>SENSITIVE_DATA_DETECTED</code> and <code>sensitive_data_types</code>, even if a
+      heuristic suggests a category. Omission does not guarantee that the input is safe;
+      for degraded classification it means sensitivity findings are unavailable, not that no
+      sensitive data exists. Sensitivity findings describe the request independently of the
+      selected target, including local or fallback. They do not themselves select cloud,
+      change the consent invariant, or introduce a new automatic fallback rule.
+    </p>
+
+    <h3>Example: healthy local recommendation with both model lists</h3>
+    <pre><code>{
+  "decision_id": "24637966-b86b-4f43-9b23-43ad7311b783",
+  "target_class": "local",
+  "policy_revision": "relayiq-judge-v1",
+  "requirements": {"consent_required": false},
+  "fallback_action": "local",
+  "reason_codes": ["LOCAL_CAPABILITY_SUFFICIENT"],
+  "classification": {
+    "routine": true,
+    "fresh_knowledge": false,
+    "reasoning_heavy": false,
+    "critical": false,
+    "sensitive_data": false
+  },
+  "explanation": "The local class is permitted and eligible.",
+  "suggested_models": {
+    "local": ["phi-4-mini"],
+    "cloud": ["nvidia/nemotron-3.5-lightning-30b-a3b"]
+  }
+}</code></pre>
+
+    <h3>Example: degraded classification</h3>
+    <pre><code>{
+  "decision_id": "0b53c474-cb1a-48ad-8a44-e494586a0915",
+  "target_class": "local",
+  "policy_revision": "relayiq-judge-v1",
+  "requirements": {"consent_required": false},
+  "fallback_action": "local",
+  "reason_codes": ["LOCAL_CAPABILITY_SUFFICIENT", "CLASSIFIER_DEGRADED"],
+  "explanation": "The local class is permitted and eligible; sensitivity findings are unavailable."
+}</code></pre>
+    <p>
+      These response examples illustrate separate decisions, not a shared result for the request
+      example above. The healthy examples assume both model lists were supplied.
+      The degraded example assumes the request omitted <code>model_mapping</code>, so its
+      response omits <code>suggested_models</code>.
+    </p>
+  </section>
+
+  <section>
+    <h2>4. Selection and fallback behavior</h2>
+    <table>
+      <thead>
+        <tr><th>Outcome</th><th>Eligibility and meaning</th><th>Required relationships</th></tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td><code>local</code></td>
+          <td>Local is policy-permitted and, when a mapping is supplied, the local lane contains at least one model.</td>
+          <td><code>consent_required</code> is <code>false</code>. If suggestions are present, <code>suggested_models.local</code> is non-empty and <code>cloud</code> preserves the caller's cloud list.</td>
+        </tr>
+        <tr>
+          <td><code>cloud</code></td>
+          <td>Cloud is policy-permitted, has inventory when mapped, has connectivity, and fits the request budget.</td>
+          <td><code>consent_required</code> is <code>false</code>. If suggestions are present, <code>suggested_models.cloud</code> is non-empty and <code>local</code> preserves the caller's local list.</td>
+        </tr>
+        <tr>
+          <td><code>cloud_with_consent</code></td>
+          <td>The cloud lane is eligible and the Judge determines from the prompt and request context that explicit approval is required.</td>
+          <td><code>consent_required</code> is <code>true</code>. If suggestions are present, <code>suggested_models.cloud</code> is non-empty and <code>local</code> preserves the caller's local list.</td>
+        </tr>
+        <tr>
+          <td><code>fallback</code></td>
+          <td>A known policy was evaluated, but neither desired nor alternative target is eligible, or policy explicitly blocks model use.</td>
+          <td><code>consent_required</code> is <code>false</code>; suggestions are omitted when no mapping was supplied, otherwise <code>{"local":[],"cloud":[]}</code>. Policy blocks require <code>stop</code>. Policy unavailability is HTTP <code>500</code>, not fallback.</td>
+        </tr>
+      </tbody>
+    </table>
+    <p>
+      RelayIQ first chooses the desired class from <code>preferred_target_class</code>, when present,
+      or from classifier/policy routing. It selects that class if eligible; otherwise it tries the
+      other class. If neither class is eligible, it returns <code>fallback</code>.
+    </p>
+    <p>
+      <code>fallback_action: "local"</code> is returned only when local failure handling is permitted
+      by policy and a local candidate is eligible for the relevant outcome. Otherwise the action is
+      <code>"stop"</code>.
+    </p>
+  </section>
+
+  <section>
+    <h2>5. Reason codes</h2>
+    <p>Multiple codes may be returned because several constraints can contribute to one decision.</p>
+    <table>
+      <thead><tr><th>Code</th><th>Meaning</th></tr></thead>
+      <tbody>
+        <tr><td><code>LOCAL_CAPABILITY_SUFFICIENT</code></td><td>Classifier/policy routing selected an eligible local class without an explicit caller preference.</td></tr>
+        <tr><td><code>CLOUD_CAPABILITY_REQUIRED</code></td><td>Classifier/policy routing selected an eligible cloud class without an explicit caller preference.</td></tr>
+        <tr><td><code>SENSITIVE_DATA_DETECTED</code></td><td>The non-degraded Judge positively detected sensitive data. Must accompany a non-empty <code>sensitive_data_types</code> array and must not accompany <code>CLASSIFIER_DEGRADED</code>.</td></tr>
+        <tr><td><code>CONNECTIVITY_UNAVAILABLE</code></td><td>Cloud was relevant to selection but the caller reported no connectivity.</td></tr>
+        <tr><td><code>CLOUD_BUDGET_EXCEEDED</code></td><td>The original UTF-8 input size exceeded <code>cloud_budget_kb</code>.</td></tr>
+        <tr><td><code>CLASSIFIER_DEGRADED</code></td><td>The classifier used its degraded or deterministic path. Omit <code>classification</code>, <code>SENSITIVE_DATA_DETECTED</code>, and <code>sensitive_data_types</code>; this is not a finding that the request contains no sensitive data.</td></tr>
+        <tr><td><code>PREFERENCE_HONORED</code></td><td>The explicit preferred target class was selected.</td></tr>
+        <tr><td><code>PREFERENCE_OVERRIDDEN</code></td><td>The explicit preferred target was ineligible and another outcome was selected.</td></tr>
+        <tr><td><code>POLICY_BLOCKED</code></td><td>The active policy explicitly prohibited model use for the input, including when it permits no target classes. The outcome is <code>fallback</code>/<code>stop</code>.</td></tr>
+        <tr><td><code>NO_ELIGIBLE_MODEL</code></td><td>A supplied mapping had no model for the desired lane, or no mapped lane was eligible.</td></tr>
+      </tbody>
+    </table>
+  </section>
+
+  <section>
+    <h2>6. POC policy snapshot</h2>
+    <p>
+      The checked-in <code>config/relayiq-policy.json</code> defines the profile-free policy
+      below. <code>policy_revision</code> identifies an operator-assigned immutable snapshot,
+      not the API draft number. Operators must assign a new revision when changing a deployed
+      snapshot; <code>relayiq-judge-v1</code> is the current revision and accompanies
+      the email-only Judge scope.
+    </p>
+    <table>
+      <thead><tr><th>Setting</th><th>Value</th><th>Effect</th></tr></thead>
+      <tbody>
+        <tr><td><code>policy_revision</code></td><td><code>relayiq-judge-v1</code></td><td>Reported on decisions made with this snapshot.</td></tr>
+        <tr><td><code>permitted_targets</code></td><td><code>["local","cloud"]</code></td><td>Both target classes may be selected when eligible.</td></tr>
+        <tr><td><code>local_failure_permitted</code></td><td><code>true</code></td><td>Eligible local execution may be offered as a fallback.</td></tr>
+        <tr><td><code>deny_inputs</code></td><td><code>["Demonstrate the configured demo block."]</code></td><td>An exact match returns <code>POLICY_BLOCKED</code> and <code>fallback</code>/<code>stop</code>.</td></tr>
+      </tbody>
+    </table>
+    <div class="callout warning">
+      Judge-reported categories are not a guarantee of complete sensitive-data detection or
+      successful redaction. An invalid configured policy fails service startup. If no policy
+      path is configured, a valid placement request returns HTTP <code>500</code> with
+      <code>INTERNAL_ERROR</code> before invoking the Judge. A policy evaluation failure also
+      returns HTTP <code>500</code>, regardless of local fallback permissions.
+    </div>
+  </section>
+
+  <section>
+    <h2>7. Validation and failure behavior</h2>
+    <table>
+      <thead><tr><th>Condition</th><th>HTTP result</th><th>Response semantics</th></tr></thead>
+      <tbody>
+        <tr><td>Valid request, including bounded fallback outcomes</td><td><code>200</code></td><td>A contract-valid placement decision is returned.</td></tr>
+        <tr><td>Malformed JSON, missing input, unknown field, wrong strict type, explicit null optional, duplicate/blank model, or out-of-range/non-finite budget</td><td><code>400</code></td><td><code>INVALID_REQUEST</code>; no decision is created.</td></tr>
+        <tr><td>Policy unavailable, policy evaluation failed, or unexpected internal endpoint failure</td><td><code>500</code></td><td><code>INTERNAL_ERROR</code>; no decision or fallback recommendation is returned.</td></tr>
+        <tr><td>Placement service temporarily cannot produce any decision</td><td><code>503</code></td><td><code>SERVICE_UNAVAILABLE</code>; no decision is created.</td></tr>
+      </tbody>
+    </table>
+
+    <h3>Error envelope</h3>
+    <pre><code>{
+  "error": "INVALID_REQUEST",
+  "message": "Missing required field: input.",
+  "decision_id": null
+}</code></pre>
+    <h3>Policy unavailable or evaluation failed (HTTP 500)</h3>
+    <pre><code>{
+  "error": "INTERNAL_ERROR",
+  "message": "The placement service could not complete the request.",
+  "decision_id": null
+}</code></pre>
+    <p>
+      Every <code>400</code>, <code>500</code>, and <code>503</code> response uses exactly
+      <code>error</code>, <code>message</code>, and <code>decision_id</code>. The stable error code is
+      one of <code>INVALID_REQUEST</code>, <code>INTERNAL_ERROR</code>, or
+      <code>SERVICE_UNAVAILABLE</code>. The message is diagnostic text and is not a machine-readable
+      decision signal.
+    </p>
+    <div class="callout">
+      RelayIQ logs decision metadata such as decision ID, policy revision, target class, reason
+      codes, and elapsed time. Request text, exception text, and credentials are not part of the
+      routine endpoint log contract.
+    </div>
+  </section>
+
+  <section>
+    <h2>8. Caller obligations</h2>
+    <ol>
+      <li>Treat <code>target_class</code>, <code>fallback_action</code>, <code>reason_codes</code>, and conditional <code>classification</code> and <code>sensitive_data_types</code> as the machine-readable decision surface. Classification signals do not override placement or consent requirements.</li>
+      <li>For either cloud outcome, use reported categories to guide the caller's own redaction of sensitive data before transmission. RelayIQ neither performs nor verifies that redaction and supplies no sanitized payload or locations of sensitive values. For <code>cloud_with_consent</code>, obtain approval before invoking the selected model; consent is not proof of redaction.</li>
+      <li>Accept new category identifiers without treating them as non-sensitive. A missing category field does not guarantee safety, especially with <code>CLASSIFIER_DEGRADED</code>. The caller remains responsible for assessing and handling data safely before cloud transmission.</li>
+      <li>For a normal recommendation with suggestions, choose from <code>suggested_models.local</code> for <code>local</code>, or <code>suggested_models.cloud</code> for either cloud target. The other list is inventory only, not authorization to switch lanes. RelayIQ does not execute the choice.</li>
+      <li>Honor <code>fallback_action: "stop"</code> by not invoking an answer model under this decision.</li>
+      <li>Handle transport errors and error envelopes as no usable decision; do not infer placement from human-readable text.</li>
+    </ol>
+  </section>
+
+  <section>
+    <h2>9. Integration and acceptance criteria</h2>
+    <p>
+      The API validates Judge output and exposes the same rules through OpenAPI.
+      Invalid or incomplete model assessments use the degraded response shape, without
+      substituting default classification flags. Callers must migrate to Draft 4 before
+      integration; the following criteria define the supported boundary.
+    </p>
+    <ul>
+      <li>Accept a profile-free request; reject the removed request field as an unknown field under Draft 4.</li>
+      <li>Return only <code>consent_required</code> in <code>requirements</code>; do not use profile matching to determine cloud eligibility.</li>
+      <li>Enforce all three assessment cases in the classification matrix, including omitting sensitivity findings whenever <code>CLASSIFIER_DEGRADED</code> is present.</li>
+      <li>Return all five strict boolean <code>classification</code> fields for healthy classification and omit the object for degraded classification. Keep <code>classification.sensitive_data</code>, <code>SENSITIVE_DATA_DETECTED</code>, and <code>sensitive_data_types</code> consistent.</li>
+      <li>Return only unique category labels for positive detections; accept an extensible vocabulary without exposing sensitive values.</li>
+      <li>Omit suggestions without a request mapping; otherwise return both lane arrays, preserve their order for normal recommendations, and empty both arrays for fallback.</li>
+      <li>Return HTTP <code>500</code> with the error envelope when policy is unavailable or evaluation fails; never emit <code>DECISION_UNAVAILABLE</code> or a success-shaped fallback for these failures. Successful decisions always contain a non-blank <code>policy_revision</code>.</li>
+      <li>Preserve target/consent relationships, policy bounds, connectivity, budget, inventory, preferences, fallback, and error envelopes.</li>
+    </ul>
+  </section>
+</main>
+</body>
+</html>

@@ -1,0 +1,223 @@
+{
+  "cases": 200,
+  "evaluated_cases": 200,
+  "dataset": "eval/data/judge_challenge.jsonl",
+  "suite": "challenge",
+  "interpretation": "Mixed candidate-label benchmark: 36 hand-authored adversarial seeds plus 164 seeded matrix cases; independent review pending",
+  "force_fallback": true,
+  "metrics": {
+    "urgency": {
+      "accuracy": 0.965,
+      "macro_precision": 0.968,
+      "macro_recall": 0.9636,
+      "macro_f1": 0.9648,
+      "per_label": {
+        "casual": {
+          "precision": 0.9828,
+          "recall": 0.9048,
+          "f1": 0.9421,
+          "support": 63
+        },
+        "critical": {
+          "precision": 1.0,
+          "recall": 1.0,
+          "f1": 1.0,
+          "support": 66
+        },
+        "general": {
+          "precision": 0.9211,
+          "recall": 0.9859,
+          "f1": 0.9524,
+          "support": 71
+        }
+      }
+    },
+    "complexity": {
+      "accuracy": 0.535,
+      "macro_precision": 0.6179,
+      "macro_recall": 0.5307,
+      "macro_f1": 0.4265,
+      "per_label": {
+        "high": {
+          "precision": 0.5215,
+          "recall": 0.9604,
+          "f1": 0.676,
+          "support": 101
+        },
+        "low": {
+          "precision": 0.7143,
+          "recall": 0.101,
+          "f1": 0.177,
+          "support": 99
+        }
+      }
+    },
+    "needs_fresh": {
+      "accuracy": 0.86,
+      "macro_precision": 0.8715,
+      "macro_recall": 0.8655,
+      "macro_f1": 0.8598,
+      "per_label": {
+        "false": {
+          "precision": 0.9535,
+          "recall": 0.7736,
+          "f1": 0.8542,
+          "support": 106
+        },
+        "true": {
+          "precision": 0.7895,
+          "recall": 0.9574,
+          "f1": 0.8654,
+          "support": 94
+        }
+      }
+    },
+    "route": {
+      "accuracy": 0.74,
+      "macro_precision": 0.6522,
+      "macro_recall": 0.5335,
+      "macro_f1": 0.5037,
+      "per_label": {
+        "cloud": {
+          "precision": 0.7487,
+          "recall": 0.9728,
+          "f1": 0.8462,
+          "support": 147
+        },
+        "local": {
+          "precision": 0.5556,
+          "recall": 0.0943,
+          "f1": 0.1613,
+          "support": 53
+        }
+      }
+    },
+    "tier": {
+      "accuracy": 0.535,
+      "macro_precision": 0.4386,
+      "macro_recall": 0.5224,
+      "macro_f1": 0.4002,
+      "per_label": {
+        "1": {
+          "precision": 0.5152,
+          "recall": 1.0,
+          "f1": 0.68,
+          "support": 34
+        },
+        "2": {
+          "precision": 0.0,
+          "recall": 0.0,
+          "f1": 0.0,
+          "support": 32
+        },
+        "3": {
+          "precision": 0.525,
+          "recall": 0.9403,
+          "f1": 0.6738,
+          "support": 67
+        },
+        "4": {
+          "precision": 0.7143,
+          "recall": 0.1493,
+          "f1": 0.2469,
+          "support": 67
+        }
+      }
+    }
+  },
+  "placement_latency_ms": {
+    "mean": 0.119,
+    "p50": 0.118,
+    "p95": 0.214,
+    "max": 0.299
+  },
+  "availability": {
+    "decision_success_rate": 1.0,
+    "fallback_decision_rate": 1.0,
+    "failures": []
+  },
+  "critical_miss_count": 0,
+  "critical_miss_rate": 0.0,
+  "critical_misses": [],
+  "unnecessary_cloud_count": 48,
+  "unnecessary_cloud_rate": 0.9057,
+  "unnecessary_cloud_ids": [
+    4,
+    5,
+    28,
+    29,
+    31,
+    33,
+    35,
+    40,
+    44,
+    48,
+    52,
+    56,
+    60,
+    64,
+    68,
+    72,
+    76,
+    80,
+    84,
+    88,
+    92,
+    96,
+    100,
+    104,
+    108,
+    112,
+    116,
+    120,
+    124,
+    128,
+    132,
+    136,
+    140,
+    144,
+    148,
+    152,
+    156,
+    160,
+    164,
+    168,
+    172,
+    176,
+    180,
+    184,
+    188,
+    192,
+    196,
+    200
+  ],
+  "missed_cloud_count": 4,
+  "missed_cloud_rate": 0.0272,
+  "missed_cloud_ids": [
+    11,
+    16,
+    19,
+    20
+  ],
+  "matrix_accuracy": {
+    "casual|high|False": 0.625,
+    "casual|high|True": 0.9333,
+    "casual|low|False": 0.1765,
+    "casual|low|True": 0.0,
+    "critical|high|False": 0.8333,
+    "critical|high|True": 1.0,
+    "critical|low|False": 0.0,
+    "critical|low|True": 0.0,
+    "general|high|False": 0.8421,
+    "general|high|True": 0.8235,
+    "general|low|False": 0.1053,
+    "general|low|True": 0.0625
+  },
+  "urgency_confusion": {
+    "casual->casual": 57,
+    "casual->general": 6,
+    "critical->critical": 66,
+    "general->casual": 1,
+    "general->general": 70
+  }
+}

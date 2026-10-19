@@ -1,0 +1,31 @@
+{
+  "id": "demo-redaction-v1",
+  "status": "synthetic-demo-only",
+  "claim": "Exact registered fixtures and bounded source handling; not general PII detection or pii-v1 conformance.",
+  "replacements": [
+    {"value": "Alex Example", "marker": "[REDACTED:PERSON]"},
+    {"value": "alex.example@example.com", "marker": "[REDACTED:EMAIL]"},
+    {"value": "EMP-DEMO-0042", "marker": "[REDACTED:SUBJECT_ID]"}
+  ],
+  "dynamic_replacement": {
+    "source": "resolved absolute demo workspace root and normalized variants",
+    "marker": "[DEMO_WORKSPACE]"
+  },
+  "forbidden_tokens": ["Alex Example", "alex.example", "EMP-DEMO-0042"],
+  "fixture_paths": ["demo_employee_record.txt"],
+  "root_message_source": "unique input.user_message values in demo-scenarios.json",
+  "guards": {
+    "fresh_non_git_workspace": true,
+    "fresh_session": true,
+    "resume_allowed": false,
+    "project_docs_allowed": false,
+    "web_enabled": false,
+    "allowed_tools": ["read_file"],
+    "allowed_read_paths": ["demo_employee_record.txt"],
+    "exact_fixture_bytes_required": true,
+    "reject_unverifiable_truncated_sources": true,
+    "preserve_canonical_local_data": true,
+    "revalidate_before_each_cloud_dispatch": true,
+    "restore_private_tool_arguments": false
+  }
+}
