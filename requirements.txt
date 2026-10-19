@@ -1,0 +1,7 @@
+fastapi
+uvicorn[standard]
+openai
+requests
+websockets
+azure-identity
+azure-identity-broker
